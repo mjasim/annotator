@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Annotator++</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #111827;
+      --panel2: #0f172a;
+      --text: #e5e7eb;
+      --textannoted: #0b0f17;
+      --muted: #9ca3af;
+      --border: rgba(255,255,255,.10);
+      --accent: #60a5fa;
+      --danger: #f87171;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: linear-gradient(180deg, #070a10, #0b0f17 40%, #070a10);
+      color: var(--text);
+    }
+
+    header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(17,24,39,.75);
+      backdrop-filter: blur(8px);
+      position: sticky; top: 0; z-index: 5;
+    }
+    header .row {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    }
+    header h1 {
+      font-size: 16px; margin: 0; letter-spacing: .2px;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 14px;
+      padding: 14px;
+      align-items: start;
+    }
+
+    .container > section:first-child {
+      position: sticky;
+      top: 70px;                   /* below the header; tweak if needed */
+      height: calc(100vh - 90px);  /* visible height */
+      overflow: auto;              /* left pane scrolls internally if needed */
+    }
+
+    @media (max-width: 1050px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: rgba(17,24,39,.85);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .panel h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin: 0 0 10px 0;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field input[type="text"], .field textarea {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.8);
+      color: var(--text);
+      outline: none;
+    }
+    .field textarea { min-height: 72px; resize: vertical; }
+
+    .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.9);
+      color: var(--text);
+      padding: 9px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover { border-color: rgba(255,255,255,.18); }
+    button.primary {
+      background: rgba(96,165,250,.18);
+      border-color: rgba(96,165,250,.35);
+    }
+    button.danger {
+      background: rgba(248,113,113,.14);
+      border-color: rgba(248,113,113,.35);
+    }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    input[type=file] {
+    border: 1px solid var(--border);
+      background: rgba(15,23,42,.9);
+      color: var(--text);
+      padding: 9px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+    } 
+
+    .colors {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .swatch {
+      width: 24px; height: 24px; border-radius: 8px;
+      border: 2px solid rgba(255,255,255,.18);
+      cursor: pointer;
+      position: relative;
+    }
+    .swatch.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      box-shadow: 0 0 0 2px rgba(0,0,0,.35) inset;
+    }
+
+    /* optional: keep or remove the checkmark */
+    .swatch.selected::after {
+      content: "✓";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 800;
+      color: black;
+      text-shadow: 0 1px 2px rgba(0,0,0,.85);
+    }
+    
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .sep { height: 1px; background: var(--border); margin: 10px 0; }
+
+    .annoList {
+      display: grid;
+      gap: 8px;
+      max-height: 42vh;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .annoItem {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: rgba(15,23,42,.75);
+      display: grid;
+      gap: 6px;
+    }
+    .annoItem .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text);
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.25);
+    }
+    .small {
+      font-size: 12px; color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    .rowBtns { display: flex; gap: 6px; }
+    .rowBtns button { padding: 7px 8px; font-size: 12px; }
+
+    /* Document viewer */
+    .docWrap {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 10px;
+      min-height: calc(100vh - 90px);
+    }
+    .docHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .docHeader .status {
+      font-size: 12px; color: var(--muted);
+    }
+
+    #doc {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(17,24,39,.85);
+      padding: 16px;
+      overflow: auto;
+      min-height: 55vh;
+      line-height: 1.6;
+    }
+
+    /* Highlight spans */
+    .anno {
+      border-radius: 6px;
+      padding: 0 2px;
+      cursor: pointer;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      outline: 1px solid rgba(0,0,0,.08);
+      color: var(--textannoted);
+    }
+    .anno.active {
+      outline: 1px solid rgba(96,165,250,.65);
+      box-shadow: 0 0 0 3px rgba(96,165,250,.18);
+    }
+
+    /* Modal */
+    dialog {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      background: rgba(17,24,39,.95);
+      color: var(--text);
+      width: min(520px, 92vw);
+      box-shadow: 0 20px 70px rgba(0,0,0,.5);
+    }
+    dialog::backdrop { background: rgba(0,0,0,.6); }
+
+    .modal {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+    .modalHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .modalHeader strong { font-size: 14px; }
+    .modalFooter {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+
+<body>
+<header>
+  <div class="row">
+    <h1>Annotator++</h1>
+    <!-- <span class="hint">Load HTML → select text → Add Highlight → export/import JSON</span> -->
+  </div>
+</header>
+
+<div class="container">
+  <!-- Left: controls -->
+  <section class="panel">
+    <h2>Import / Export</h2>
+    <div class="controls">
+      <div class="field">
+        <label>Import HTML file</label>
+        <input id="htmlFile" type="file" accept=".html,.htm,text/html" />
+        <div class="hint">We strip &lt;script&gt; tags and inline on* handlers as a safety precaution.</div>
+      </div>
+
+      <div class="btnrow">
+        <button id="exportBtn" class="primary" disabled>Export JSON</button>
+        <button id="importBtn">Import JSON</button>
+        <input id="jsonFile" type="file" accept="application/json,.json" hidden />
+        <button id="clearBtn" class="danger" disabled>Clear All Annotations</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2>Annotate</h2>
+
+      <div class="field">
+        <label>Highlight color</label>
+        <div id="colorRow" class="colors"></div>
+      </div>
+
+      <div class="field">
+        <label>Tag / Topic</label>
+        <input id="tagInput" type="text" placeholder="e.g., Claim, Evidence, Concept, Definition" />
+      </div>
+
+      <div class="field">
+        <label>Explanation</label>
+        <textarea id="noteInput" placeholder="Short explanation for this highlight..."></textarea>
+      </div>
+
+      <div class="btnrow">
+        <button id="addBtn" class="primary" disabled>Add Highlight from Selection</button>
+      </div>
+
+      <div class="hint">
+        Tips:
+        <ul>
+          <li>Select text inside the document pane, then click the <b>Add Highlight from Selection</b> button.</li>
+          <li>Click a highlight in the document to jump to its entry and edit.</li>
+          <li>[TODO] Add overlapping highlights.</li>
+        </ul>
+      </div>
+
+      <div class="sep"></div>
+
+      <h2>Annotations [TODO: Add filters]</h2>
+      <div id="annoList" class="annoList"></div>
+    </div>
+  </section>
+
+  <!-- Right: document -->
+  <section class="panel docWrap">
+    <div class="docHeader">
+      <div class="status" id="status">No HTML loaded.</div>
+      <div class="hint">Document is read-only; highlights are interactive.</div>
+    </div>
+    <div id="doc" aria-label="Loaded document area"></div>
+  </section>
+</div>
+
+<!-- Edit modal -->
+<dialog id="editDialog">
+  <form method="dialog" class="modal" id="editForm">
+    <div class="modalHeader">
+      <strong>Edit annotation</strong>
+      <span class="hint mono" id="editId"></span>
+    </div>
+
+    <div class="field">
+      <label>Color</label>
+      <div id="editColorRow" class="colors"></div>
+    </div>
+
+    <div class="field">
+      <label>Tag / Name</label>
+      <input id="editTag" type="text" />
+    </div>
+
+    <div class="field">
+      <label>Explanation</label>
+      <textarea id="editNote"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Preview (snippet)</label>
+      <div class="hint" id="editSnippet"></div>
+    </div>
+
+    <div class="modalFooter">
+      <button value="cancel">Cancel</button>
+      <button id="deleteBtn" class="danger" value="delete">Delete</button>
+      <button id="saveBtn" class="primary" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(() => {
+  // ---------------------------
+  // State
+  // ---------------------------
+  const state = {
+    loaded: false,
+    htmlFingerprint: null, // helps detect mismatch with imported JSON
+    annotations: [], // {id, color, tag, note, startXPath, startOffset, endXPath, endOffset, snippet}
+    selectedColor: "#fde68a", // default
+    activeAnnoId: null,
+  };
+
+  // Colors (add/remove as you like)
+  const COLORS = [
+    "#fde68a", // amber
+    "#bbf7d0", // green
+    "#bfdbfe", // blue
+    "#fecaca", // red
+    "#e9d5ff", // purple
+    "#fbcfe8", // pink
+    "#99f6e4", // teal
+    "#e5e7eb", // gray
+  ];
+
+  // ---------------------------
+  // DOM helpers
+  // ---------------------------
+  const el = (id) => document.getElementById(id);
+
+  const htmlFile = el("htmlFile");
+  const jsonFile = el("jsonFile");
+  const importBtn = el("importBtn");
+  const exportBtn = el("exportBtn");
+  const clearBtn = el("clearBtn");
+  const addBtn = el("addBtn");
+  const tagInput = el("tagInput");
+  const noteInput = el("noteInput");
+  const doc = el("doc");
+  const status = el("status");
+  const annoList = el("annoList");
+
+  const editDialog = el("editDialog");
+  const editForm = el("editForm");
+  const editId = el("editId");
+  const editTag = el("editTag");
+  const editNote = el("editNote");
+  const editSnippet = el("editSnippet");
+  const deleteBtn = el("deleteBtn");
+
+  // ---------------------------
+  // Utility: basic "fingerprint" of loaded HTML
+  // (not cryptographic; just to detect obvious mismatch)
+  // ---------------------------
+  function simpleHash(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16);
+  }
+
+  // ---------------------------
+  // Basic sanitizer: remove <script> tags + inline on* handlers
+  // ---------------------------
+  function sanitizeHtml(htmlText) {
+    const parser = new DOMParser();
+    const docParsed = parser.parseFromString(htmlText, "text/html");
+
+    // Remove scripts
+    docParsed.querySelectorAll("script").forEach(s => s.remove());
+
+    // Remove inline event handlers (onload, onclick, etc.)
+    const walker = docParsed.createTreeWalker(docParsed.body, NodeFilter.SHOW_ELEMENT);
+    let node = walker.currentNode;
+    while (node) {
+      [...node.attributes].forEach(attr => {
+        if (/^on/i.test(attr.name)) node.removeAttribute(attr.name);
+      });
+      node = walker.nextNode();
+    }
+
+    return docParsed.body.innerHTML;
+  }
+
+  // ---------------------------
+  // XPath helpers (relative to #doc)
+  // ---------------------------
+  function getXPath(node) {
+    // We build an XPath under #doc element.
+    // If node is a text node, we reference its parent and later resolve child text node by index.
+    const root = doc;
+    if (node === root) return ".";
+
+    const parts = [];
+    let cur = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+
+    while (cur && cur !== root) {
+      const parent = cur.parentNode;
+      if (!parent) break;
+
+      // Count same-tag siblings
+      let index = 1;
+      let sib = cur;
+      while ((sib = sib.previousElementSibling)) {
+        if (sib.tagName === cur.tagName) index++;
+      }
+      parts.unshift(`${cur.tagName.toLowerCase()}[${index}]`);
+      cur = parent;
+    }
+
+    const base = parts.length ? "./" + parts.join("/") : ".";
+    if (node.nodeType === Node.TEXT_NODE) {
+      const textIndex = getTextNodeIndex(node);
+      return base + `::text()[${textIndex}]`;
+    }
+    return base;
+  }
+
+  function getTextNodeIndex(textNode) {
+    // 1-based index of this text node among parent's text nodes (in DOM order)
+    const parent = textNode.parentNode;
+    const texts = [];
+    parent.childNodes.forEach(n => { if (n.nodeType === Node.TEXT_NODE) texts.push(n); });
+    return Math.max(1, texts.indexOf(textNode) + 1);
+  }
+
+  function resolveXPath(xp) {
+    // Supports:
+    // - element path like "./div[1]/p[2]"
+    // - text node path ending with "::text()[k]"
+    if (xp === "." || xp === "./") return doc;
+
+    const textMatch = xp.match(/(.*)::text\(\)\[(\d+)\]$/);
+    if (textMatch) {
+      const elemPath = textMatch[1];
+      const k = parseInt(textMatch[2], 10);
+      const elem = resolveXPath(elemPath);
+      if (!elem || elem === doc && elemPath !== ".") return null;
+      const textNodes = [];
+      elem.childNodes.forEach(n => { if (n.nodeType === Node.TEXT_NODE) textNodes.push(n); });
+      return textNodes[k - 1] || null;
+    }
+
+    // Element-only path
+    const segments = xp.replace(/^\.\//, "").split("/").filter(Boolean);
+    let cur = doc;
+    for (const seg of segments) {
+      const m = seg.match(/^([a-z0-9]+)\[(\d+)\]$/i);
+      if (!m) return null;
+      const tag = m[1].toUpperCase();
+      const idx = parseInt(m[2], 10);
+
+      const matches = [];
+      cur.childNodes.forEach(n => {
+        if (n.nodeType === Node.ELEMENT_NODE && n.tagName === tag) matches.push(n);
+      });
+      cur = matches[idx - 1];
+      if (!cur) return null;
+    }
+    return cur;
+  }
+
+  // ---------------------------
+  // Selection / highlight logic
+  // ---------------------------
+  function selectionInDoc(sel) {
+    if (!sel || sel.rangeCount === 0) return false;
+    const r = sel.getRangeAt(0);
+    return doc.contains(r.commonAncestorContainer);
+  }
+
+  function rangeIntersectsExistingAnno(range) {
+    // If selection intersects a highlight span, reject (simple rule to avoid overlaps)
+    const anc = range.commonAncestorContainer.nodeType === 1
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    if (!anc) return false;
+
+    // If common ancestor already within anno
+    if (anc.closest && anc.closest(".anno")) return true;
+
+    // Otherwise scan for anno spans within ancestor and test intersection
+    const spans = anc.querySelectorAll ? anc.querySelectorAll(".anno") : [];
+    for (const sp of spans) {
+      const spRange = document.createRange();
+      spRange.selectNodeContents(sp);
+      if (
+        range.compareBoundaryPoints(Range.END_TO_START, spRange) < 0 &&
+        range.compareBoundaryPoints(Range.START_TO_END, spRange) > 0
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function wrapRangeWithSpan(range, anno) {
+    const span = document.createElement("span");
+    span.className = "anno";
+    span.dataset.annoId = anno.id;
+    span.style.backgroundColor = anno.color;
+    span.title = `${anno.tag || "Annotation"}: ${anno.note || ""}`.trim();
+
+    // Extract and wrap contents (works across multiple nodes)
+    const contents = range.extractContents();
+    span.appendChild(contents);
+    range.insertNode(span);
+
+    // Normalize selection
+    range.setStartAfter(span);
+    range.collapse(true);
+
+    // Ensure span clicks open editor
+    span.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openEditor(span.dataset.annoId);
+    });
+
+    return span;
+  }
+
+  function getSnippetFromRange(range, maxLen = 160) {
+    const s = range.toString().replace(/\s+/g, " ").trim();
+    if (s.length <= maxLen) return s;
+    return s.slice(0, maxLen - 1) + "…";
+  }
+
+  function createAnnotationFromSelection() {
+    const sel = window.getSelection();
+    if (!selectionInDoc(sel)) {
+      alert("Select text inside the document area first.");
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) {
+      alert("Selection is empty. Select some text to highlight.");
+      return;
+    }
+    if (rangeIntersectsExistingAnno(range)) {
+      alert("Overlapping highlights are not allowed in this simple version.");
+      return;
+    }
+
+    // Capture anchoring BEFORE wrapping
+    const anno = {
+      id: crypto.randomUUID(),
+      color: state.selectedColor,
+      tag: tagInput.value.trim(),
+      note: noteInput.value.trim(),
+      startXPath: getXPath(range.startContainer),
+      startOffset: range.startOffset,
+      endXPath: getXPath(range.endContainer),
+      endOffset: range.endOffset,
+      snippet: getSnippetFromRange(range),
+    };
+
+    wrapRangeWithSpan(range, anno);
+
+    state.annotations.push(anno);
+    state.activeAnnoId = anno.id;
+    renderAnnoList();
+    updateButtons();
+  }
+
+  function reapplyAllAnnotations() {
+    // First remove existing spans and rebuild (keeps logic simple)
+    removeAllAnnoSpans();
+
+    // Apply in stored order; you can sort if you want (e.g., by start position)
+    for (const anno of state.annotations) {
+      const startNode = resolveXPath(anno.startXPath);
+      const endNode = resolveXPath(anno.endXPath);
+      if (!startNode || !endNode) continue;
+
+      try {
+        const r = document.createRange();
+        r.setStart(startNode, Math.min(anno.startOffset, startNode.length ?? anno.startOffset));
+        r.setEnd(endNode, Math.min(anno.endOffset, endNode.length ?? anno.endOffset));
+
+        // Skip if empty or intersects already-applied spans (can happen due to drift)
+        if (r.collapsed || rangeIntersectsExistingAnno(r)) continue;
+
+        wrapRangeWithSpan(r, anno);
+      } catch (e) {
+        // If the DOM changed enough, anchoring can fail. We silently skip.
+        console.warn("Failed to reapply annotation", anno.id, e);
+      }
+    }
+
+    attachClicksToExistingSpans(); // (in case spans existed from import)
+  }
+
+  function removeAllAnnoSpans() {
+    const spans = doc.querySelectorAll(".anno");
+    spans.forEach(sp => {
+      // Replace span with its children
+      const parent = sp.parentNode;
+      while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+      parent.removeChild(sp);
+      parent.normalize();
+    });
+  }
+
+  function attachClicksToExistingSpans() {
+    doc.querySelectorAll(".anno").forEach(sp => {
+      sp.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openEditor(sp.dataset.annoId);
+      });
+    });
+  }
+
+  // ---------------------------
+  // UI rendering
+  // ---------------------------
+  function renderColors(container, selected, onSelect) {
+    container.innerHTML = "";
+    COLORS.forEach(c => {
+      const sw = document.createElement("div");
+      sw.className = "swatch" + (c === selected ? " selected" : "");
+      sw.style.backgroundColor = c;
+      sw.title = c;
+      sw.addEventListener("click", () => onSelect(c));
+      container.appendChild(sw);
+    });
+  }
+
+  function bindColorRow(container, getSelected, setSelected) {
+    const rerender = () => {
+      renderColors(container, getSelected(), (c) => {
+        setSelected(c);
+        rerender();
+      });
+    };
+    rerender();
+  }
+
+  function setActiveSpan(annoId) {
+    doc.querySelectorAll(".anno").forEach(sp => {
+      sp.classList.toggle("active", sp.dataset.annoId === annoId);
+    });
+  }
+
+  function renderAnnoList() {
+    annoList.innerHTML = "";
+    if (state.annotations.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "hint";
+      empty.textContent = "No annotations yet.";
+      annoList.appendChild(empty);
+      setActiveSpan(null);
+      return;
+    }
+
+    for (const a of state.annotations) {
+      const item = document.createElement("div");
+      item.className = "annoItem";
+
+      const top = document.createElement("div");
+      top.className = "top";
+
+      const badge = document.createElement("div");
+      badge.className = "badge";
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.backgroundColor = a.color;
+
+      const label = document.createElement("span");
+      label.textContent = a.tag ? a.tag : "(untitled)";
+
+      badge.appendChild(dot);
+      badge.appendChild(label);
+
+      const rowBtns = document.createElement("div");
+      rowBtns.className = "rowBtns";
+
+      const edit = document.createElement("button");
+      edit.textContent = "Edit";
+      edit.addEventListener("click", () => openEditor(a.id));
+
+      const jump = document.createElement("button");
+      jump.textContent = "Jump";
+      jump.addEventListener("click", () => {
+        state.activeAnnoId = a.id;
+        setActiveSpan(a.id);
+        const span = doc.querySelector(`.anno[data-anno-id="${CSS.escape(a.id)}"]`);
+        if (span) span.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      rowBtns.appendChild(jump);
+      rowBtns.appendChild(edit);
+
+      top.appendChild(badge);
+      top.appendChild(rowBtns);
+
+      const snippet = document.createElement("div");
+      snippet.className = "small";
+      snippet.textContent = a.snippet || "";
+
+      const note = document.createElement("div");
+      note.className = "small";
+      note.textContent = a.note || "";
+
+      item.appendChild(top);
+      item.appendChild(snippet);
+      item.appendChild(note);
+
+      item.addEventListener("click", () => {
+        state.activeAnnoId = a.id;
+        setActiveSpan(a.id);
+      });
+
+      annoList.appendChild(item);
+    }
+
+    setActiveSpan(state.activeAnnoId);
+  }
+
+  function updateButtons() {
+    const hasHtml = state.loaded;
+    addBtn.disabled = !hasHtml;
+    exportBtn.disabled = !hasHtml || state.annotations.length === 0;
+    clearBtn.disabled = !hasHtml || state.annotations.length === 0;
+  }
+
+  function setStatus(msg) { status.textContent = msg; }
+
+  // ---------------------------
+  // Editor modal
+  // ---------------------------
+  let editSelectedColor = null;
+  let editingAnnoId = null;
+
+  function openEditor(annoId) {
+    const a = state.annotations.find(x => x.id === annoId);
+    if (!a) return;
+
+    editingAnnoId = annoId;
+    editSelectedColor = a.color;
+
+    editId.textContent = a.id.slice(0, 8);
+    editTag.value = a.tag || "";
+    editNote.value = a.note || "";
+    editSnippet.textContent = a.snippet || "";
+
+    bindColorRow(document.getElementById("editColorRow"),
+      () => editSelectedColor,
+      (c) => editSelectedColor = c
+    );
+
+    state.activeAnnoId = annoId;
+    setActiveSpan(annoId);
+
+    editDialog.showModal();
+  }
+
+  editForm.addEventListener("close", () => {
+    editingAnnoId = null;
+  });
+
+  editForm.addEventListener("submit", (e) => {
+    // dialog buttons use values: cancel/delete/save
+    const action = editDialog.returnValue;
+
+    const a = state.annotations.find(x => x.id === editingAnnoId);
+    if (!a) return;
+
+    if (action === "delete") {
+      deleteAnnotation(a.id);
+      return;
+    }
+    if (action === "save") {
+      a.color = editSelectedColor;
+      a.tag = editTag.value.trim();
+      a.note = editNote.value.trim();
+
+      // Update DOM span if exists
+      const sp = doc.querySelector(`.anno[data-anno-id="${CSS.escape(a.id)}"]`);
+      if (sp) {
+        sp.style.backgroundColor = a.color;
+        sp.title = `${a.tag || "Annotation"}: ${a.note || ""}`.trim();
+      }
+
+      renderAnnoList();
+      updateButtons();
+    }
+  });
+
+  function deleteAnnotation(annoId) {
+    // Remove from state
+    state.annotations = state.annotations.filter(a => a.id !== annoId);
+
+    // Remove span from DOM (unwrap)
+    const sp = doc.querySelector(`.anno[data-anno-id="${CSS.escape(annoId)}"]`);
+    if (sp) {
+      const parent = sp.parentNode;
+      while (sp.firstChild) parent.insertBefore(sp.firstChild, sp);
+      parent.removeChild(sp);
+      parent.normalize();
+    }
+
+    if (state.activeAnnoId === annoId) state.activeAnnoId = null;
+    renderAnnoList();
+    updateButtons();
+  }
+
+  // ---------------------------
+  // Import / Export
+  // ---------------------------
+  function downloadJson(obj, filename = "annotations.json") {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportAnnotations() {
+    const payload = {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      htmlFingerprint: state.htmlFingerprint,
+      annotations: state.annotations,
+    };
+    downloadJson(payload);
+  }
+
+  async function importAnnotationsFromFile(file) {
+    const txt = await file.text();
+    let payload;
+    try {
+      payload = JSON.parse(txt);
+    } catch {
+      alert("Invalid JSON file.");
+      return;
+    }
+    if (!payload || !Array.isArray(payload.annotations)) {
+      alert("JSON does not look like an annotations export from this tool.");
+      return;
+    }
+    if (!state.loaded) {
+      alert("Load an HTML file first, then import the JSON.");
+      return;
+    }
+
+    // Warn on mismatch
+    if (payload.htmlFingerprint && payload.htmlFingerprint !== state.htmlFingerprint) {
+      const ok = confirm(
+        "Warning: The imported JSON was created for a different HTML file (fingerprint mismatch).\n" +
+        "Highlights may not restore correctly. Continue anyway?"
+      );
+      if (!ok) return;
+    }
+
+    // Replace current annotations and reapply
+    state.annotations = payload.annotations.map(a => ({
+      id: a.id || crypto.randomUUID(),
+      color: a.color || "#fde68a",
+      tag: a.tag || "",
+      note: a.note || "",
+      startXPath: a.startXPath,
+      startOffset: a.startOffset,
+      endXPath: a.endXPath,
+      endOffset: a.endOffset,
+      snippet: a.snippet || "",
+    })).filter(a => a.startXPath && a.endXPath && Number.isFinite(a.startOffset) && Number.isFinite(a.endOffset));
+
+    reapplyAllAnnotations();
+    renderAnnoList();
+    updateButtons();
+    setStatus(`Imported ${state.annotations.length} annotations.`);
+  }
+
+  // ---------------------------
+  // Events
+  // ---------------------------
+  // Color pickers
+  bindColorRow(document.getElementById("colorRow"),
+    () => state.selectedColor,
+    (c) => state.selectedColor = c
+  );
+
+  htmlFile.addEventListener("change", async () => {
+    const file = htmlFile.files?.[0];
+    if (!file) return;
+
+    const raw = await file.text();
+    const sanitized = sanitizeHtml(raw);
+
+    doc.innerHTML = sanitized;
+    attachClicksToExistingSpans();
+
+    state.loaded = true;
+    state.annotations = [];
+    state.activeAnnoId = null;
+    state.htmlFingerprint = simpleHash(sanitized);
+
+    renderAnnoList();
+    updateButtons();
+    setStatus(`Loaded: ${file.name} (fingerprint ${state.htmlFingerprint})`);
+  });
+
+  addBtn.addEventListener("click", () => createAnnotationFromSelection());
+
+  exportBtn.addEventListener("click", () => exportAnnotations());
+
+  importBtn.addEventListener("click", () => jsonFile.click());
+
+  jsonFile.addEventListener("change", async () => {
+    const file = jsonFile.files?.[0];
+    if (!file) return;
+    await importAnnotationsFromFile(file);
+    jsonFile.value = ""; // allow re-import same file
+  });
+
+  clearBtn.addEventListener("click", () => {
+    if (!confirm("Clear all annotations?")) return;
+    state.annotations = [];
+    state.activeAnnoId = null;
+    removeAllAnnoSpans();
+    renderAnnoList();
+    updateButtons();
+    setStatus("All annotations cleared.");
+  });
+
+  // Keep Add enabled (HTML loaded) and make it easier to highlight
+  document.addEventListener("selectionchange", () => {
+    if (!state.loaded) return;
+    const sel = window.getSelection();
+    // nothing to do for now; you can add UI cues here
+  });
+
+  // Clicking blank doc area clears active outline
+  doc.addEventListener("click", () => {
+    state.activeAnnoId = null;
+    setActiveSpan(null);
+  });
+
+})();
+</script>
+</body>
+</html>
