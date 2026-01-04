@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "createdAt": "2026-01-04T19:52:10.201Z",
+  "htmlFingerprint": "e3151c0c",
+  "annotations": [
+    {
+      "id": "561824fc-4ca1-4d15-a91a-44090847b07b",
+      "color": "#fde68a",
+      "tag": "Country",
+      "note": "Name of countries",
+      "startXPath": "./main[1]/section[1]/section[1]/div[1]/div[2]::text()[2]",
+      "startOffset": 27,
+      "endXPath": "./main[1]/section[1]/section[1]/div[1]/div[2]::text()[2]",
+      "endOffset": 34,
+      "snippet": "Canada"
+    },
+    {
+      "id": "61eb005e-f886-417b-8b3d-e9122fac59be",
+      "color": "#fde68a",
+      "tag": "Country",
+      "note": "Name of countries",
+      "startXPath": "./main[1]/section[1]/section[1]/div[1]/div[4]::text()[3]",
+      "startOffset": 39,
+      "endXPath": "./main[1]/section[1]/section[1]/div[1]/div[4]::text()[3]",
+      "endOffset": 52,
+      "snippet": "United States"
+    },
+    {
+      "id": "69df70a5-65be-424c-8072-63cbf42bf87c",
+      "color": "#fde68a",
+      "tag": "Country",
+      "note": "Name of countries",
+      "startXPath": "./main[1]/section[1]/section[1]/div[1]/div[4]::text()[4]",
+      "startOffset": 41,
+      "endXPath": "./main[1]/section[1]/section[1]/div[1]/div[4]::text()[4]",
+      "endOffset": 55,
+      "snippet": "United States"
+    },
+    {
+      "id": "a65b8816-624b-4d9a-bf39-6c9eeadd6f8c",
+      "color": "#fde68a",
+      "tag": "Country",
+      "note": "Name of countries",
+      "startXPath": "./main[1]/section[2]/section[2]/section[1]/header[1]/div[1]/h3[1]::text()[2]",
+      "startOffset": 1,
+      "endXPath": "./main[1]/section[2]/section[2]/section[1]/header[1]/div[1]/h3[1]::text()[2]",
+      "endOffset": 7,
+      "snippet": "Visual"
+    }
+  ]
+}
